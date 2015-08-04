@@ -1,7 +1,7 @@
 audio-slot-param
 ===
 
-Link and transform schedule-based observables and connect to Web Audio AudioParams.
+Link and transform schedule-based observables and connect to [AudioParams](https://developer.mozilla.org/en-US/docs/Web/API/AudioParam) (Web Audio API).
 
 Params are instances of [observ-node-array/single](https://github.com/mmckegg/observ-node-array/blob/master/single.js).
 
