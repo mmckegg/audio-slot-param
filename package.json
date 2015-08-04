@@ -1,0 +1,34 @@
+{
+  "name": "audio-slot-param",
+  "version": "0.0.0",
+  "description": "Link and transform schedule-based observables and connect to Web Audio AudioParams.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mmckegg/audio-slot-param.git"
+  },
+  "keywords": [
+    "FRP",
+    "observ",
+    "reactive",
+    "AudioParam",
+    "waapi",
+    "schedule",
+    "setValueAt",
+    "transform"
+  ],
+  "author": "Matt McKegg",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mmckegg/audio-slot-param/issues"
+  },
+  "homepage": "https://github.com/mmckegg/audio-slot-param#readme",
+  "dependencies": {
+    "geval": "^2.1.1",
+    "observ": "^0.2.0",
+    "observ-node-array": "^1.8.0"
+  }
+}
