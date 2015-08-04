@@ -1,6 +1,6 @@
 {
   "name": "audio-slot-param",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Link and transform schedule-based observables and connect to AudioParams (Web Audio API).",
   "main": "index.js",
   "scripts": {
