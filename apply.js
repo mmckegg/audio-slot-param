@@ -4,7 +4,7 @@ module.exports = ApplyParam
 
 function ApplyParam(context, target, param){
 
-  var release = null 
+  var release = null
   var lastValue = null
   var currentTime = context.audio.currentTime
   var events = []
@@ -43,8 +43,8 @@ function ApplyParam(context, target, param){
 
     var fromValue = getValueAt(descriptor.at)
 
-    descriptor.fromValue = descriptor.fromValue != null ? 
-      descriptor.fromValue : 
+    descriptor.fromValue = descriptor.fromValue != null ?
+      descriptor.fromValue :
       fromValue
 
 
