@@ -22,7 +22,7 @@ function ApplyParam(context, target, param){
     lastValue = param()
   }
 
-  if (currentTime != null){
+  if (currentTime != null && isFinite(lastValue)) {
     target.setValueAtTime(lastValue, currentTime)
   }
 
