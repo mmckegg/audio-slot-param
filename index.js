@@ -16,6 +16,7 @@ function Param(context, defaultValue){
 
   // handle defaultValue
   var set = obs.set
+  obs.defaultValue = defaultValue
   obs.set = function(v){
     set(v == null ? defaultValue : v)
     if (typeof obs() === 'number'){
