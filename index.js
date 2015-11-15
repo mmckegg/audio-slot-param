@@ -1,5 +1,6 @@
 var ObservNode = require('observ-node-array/single')
 var Event = require('geval')
+var setImmediate = require('setimmediate2').setImmediate
 
 module.exports = Param
 
@@ -8,7 +9,7 @@ function Param(context, defaultValue){
   var initial = true
   var queued = []
 
-  process.nextTick(function() {
+  setImmediate(function() {
     initial = false
     queued.forEach(broadcast)
     queued.length = 0
@@ -20,10 +21,10 @@ function Param(context, defaultValue){
   obs.set = function(v){
     set(v == null ? defaultValue : v)
     if (typeof obs() === 'number'){
-      var msg = { 
-        type: 'set', 
-        value: obs(), 
-        at: context.audio.currentTime 
+      var msg = {
+        type: 'set',
+        value: obs(),
+        at: context.audio.currentTime
       }
       if (initial) {
         queued.push(msg)
@@ -59,7 +60,7 @@ function Param(context, defaultValue){
   var release = null
   var lastNode = null
   obs.onNode(function(node){
-    
+
     if (lastNode){
       release&&release()
       release = null
