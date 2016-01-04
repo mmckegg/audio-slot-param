@@ -59,10 +59,10 @@ function Param(context, defaultValue){
 
   var release = null
   var lastNode = null
-  obs.onNode(function(node){
+  obs.onNode(function (node) {
 
-    if (lastNode){
-      release&&release()
+    if (lastNode) {
+      release && release()
       release = null
     }
 
@@ -75,44 +75,44 @@ function Param(context, defaultValue){
     lastNode = node
   })
 
-  obs.triggerOn = function(at){
+  obs.triggerOn = function (at) {
     return obs.node && obs.node.triggerOn && obs.node.triggerOn(at) || 0
   }
 
-  obs.triggerOff = function(at){
+  obs.triggerOff = function (at) {
     return obs.node && obs.node.triggerOff && obs.node.triggerOff(at) || 0
   }
 
-  obs.getReleaseDuration = function(){
+  obs.getReleaseDuration = function () {
     return obs.node && obs.node.getReleaseDuration && obs.node.getReleaseDuration() || 0
   }
 
   return obs
 }
 
-Param.triggerOn = function(obj, at){
-  for (var k in obj){
-    if (obj[k] && obj[k].triggerOn){
+Param.triggerOn = function (obj, at) {
+  for (var k in obj) {
+    if (obj[k] && obj[k].triggerOn) {
       obj[k].triggerOn(at)
     }
   }
 }
 
-Param.triggerOff = function(obj, stopAt){
-  for (var k in obj){
-    if (obj[k] && obj[k].triggerOff){
+Param.triggerOff = function (obj, stopAt) {
+  for (var k in obj) {
+    if (obj[k] && obj[k].triggerOff) {
       var release = obj[k].getReleaseDuration && obj[k].getReleaseDuration() || 0
-      obj[k].triggerOff(stopAt-release)
+      obj[k].triggerOff(stopAt - release)
     }
   }
 }
 
-Param.getReleaseDuration = function(obj){
+Param.getReleaseDuration = function (obj) {
   var result = 0
-  for (var k in obj){
-    if (obj[k] && obj[k].getReleaseDuration){
+  for (var k in obj) {
+    if (obj[k] && obj[k].getReleaseDuration) {
       var val = obj[k].getReleaseDuration()
-      if (val > result){
+      if (val > result) {
         result = val
       }
     }
@@ -120,8 +120,8 @@ Param.getReleaseDuration = function(obj){
   return result
 }
 
-function getValue(object, defaultValue){
-  if (object instanceof Object && !Array.isArray(object)){
+function getValue (object, defaultValue) {
+  if (object instanceof Object && !Array.isArray(object)) {
     return getValue(object.value, defaultValue)
   } else {
     return object != null ? object : defaultValue
