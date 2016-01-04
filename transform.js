@@ -21,7 +21,7 @@ function ParamTransform(context, params){
     if (container.param){
 
       var param = container.param
-      
+
       if (param.onSchedule){
         releases.push(param.onSchedule(schedule.bind(this, i)))
         interpolateChannel[i] = true
@@ -80,8 +80,8 @@ function ParamTransform(context, params){
     var toTime = descriptor.at + (descriptor.duration || 0)
     lastValues[index] = descriptor.value
 
-    descriptor.fromValue = descriptor.fromValue != null ? 
-      descriptor.fromValue : 
+    descriptor.fromValue = descriptor.fromValue != null ?
+      descriptor.fromValue :
       getChannelValueAt(index, descriptor.at)
 
     truncate(index, descriptor.at)
@@ -95,7 +95,7 @@ function ParamTransform(context, params){
     })
 
     var endTime = getEndTime()
-    if (endTime > toTime){
+    if (endTime > toTime) {
       broadcastIfValid({
         at: toTime,
         value: getValueAt(endTime),
@@ -135,6 +135,7 @@ function ParamTransform(context, params){
         }
       }
     }
+    return maxTime
   }
 
   function getValueAt(time){
