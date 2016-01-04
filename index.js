@@ -66,7 +66,9 @@ function Param(context, defaultValue){
       release = null
     }
 
-    if (node){
+    if (node) {
+      var value = node.getValueAt(context.audio.currentTime)
+      initial ? queued.push(value) : broadcast(value)
       var release = node.onSchedule(broadcast)
     }
 
