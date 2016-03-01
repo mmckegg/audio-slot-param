@@ -3,43 +3,41 @@ var interpolate = require('./lib/interpolate.js')
 
 module.exports = ParamTransform
 
-function ParamTransform(context, params){
-
+function ParamTransform (context, params) {
   var releases = []
   var channels = []
   var transforms = []
   var lastValues = []
   var interpolateChannel = []
 
-  params.forEach(function(container, i){
-    if (container.onSchedule){
+  params.forEach(function (container, i) {
+    if (container.onSchedule) {
       container = { param: container }
-    } else if (!(container instanceof Object)){
+    } else if (!(container instanceof Object)) {
       container = { value: container }
     }
 
-    if (container.param){
-
+    if (container.param) {
       var param = container.param
 
-      if (param.onSchedule){
+      if (param.onSchedule) {
         releases.push(param.onSchedule(schedule.bind(this, i)))
         interpolateChannel[i] = true
       } else if (typeof param === 'function') {
         releases.push(param(schedule.bind(this, i)))
       }
-      if (param.getValueAt){
+      if (param.getValueAt) {
         lastValues[i] = param.getValueAt(context.audio.currentTime)
       } else if (typeof param === 'function') {
         lastValues[i] = param()
       }
 
       channels[i] = []
-    } else if (container.value != null){
+    } else if (container.value != null) {
       lastValues[i] = container.value
     }
 
-    if (container.transform){
+    if (container.transform) {
       transforms[i] = container.transform
     }
   })
@@ -47,42 +45,41 @@ function ParamTransform(context, params){
   var broadcast = null
 
   return {
-    onSchedule: Event(function(b){
+    onSchedule: Event(function (b) {
       broadcast = b
     }),
 
-    getValueAt: function(time){
+    getValueAt: function (time) {
       return getValueAt(time)
     },
 
-    resend: function(){
+    resend: function () {
       broadcast({
         value: getValueAt(context.audio.currentTime),
         at: context.audio.currentTime
       })
     },
 
-    destroy: function(){
-      while (releases.length){
+    destroy: function () {
+      while (releases.length) {
         releases.pop()()
       }
     }
   }
 
-
   // scoped
 
-  function schedule(index, descriptor){
-    if (!interpolateChannel[index]){
+  function schedule (index, descriptor) {
+    if (!interpolateChannel[index]) {
       descriptor = { value: descriptor, at: context.audio.currentTime }
     }
 
     var toTime = descriptor.at + (descriptor.duration || 0)
     lastValues[index] = descriptor.value
 
-    descriptor.fromValue = descriptor.fromValue != null ?
-      descriptor.fromValue :
-      getChannelValueAt(index, descriptor.at)
+    descriptor.fromValue = descriptor.fromValue != null
+      ? descriptor.fromValue
+      : getChannelValueAt(index, descriptor.at)
 
     truncate(index, descriptor.at)
     channels[index].push(descriptor)
@@ -104,32 +101,32 @@ function ParamTransform(context, params){
     }
   }
 
-  function broadcastIfValid(descriptor) {
+  function broadcastIfValid (descriptor) {
     if (descriptor && isFinite(descriptor.value)) {
       broadcast(descriptor)
     }
   }
 
-  function truncate(index, at){
+  function truncate (index, at) {
     var events = channels[index]
     var currentTime = context.audio.currentTime
-    for (var i=events.length-1;i>=0;i--){
+    for (var i = events.length - 1; i >= 0; i--) {
       var to = events[i].at + (events[i].duration || 0)
-      if (events[i].at > at || to < currentTime){
+      if (events[i].at > at || to < currentTime) {
         events.splice(i, 1)
       }
     }
   }
 
-  function getEndTime(){
+  function getEndTime () {
     var maxTime = context.audio.currentTime
-    for (var i=0;i<params.length;i++){
+    for (var i = 0; i < params.length; i++) {
       var events = channels[i]
-      if (events){
-        var lastEvent = events[events.length-1]
-        if (lastEvent){
+      if (events) {
+        var lastEvent = events[events.length - 1]
+        if (lastEvent) {
           var endAt = lastEvent.at + (lastEvent.duration || 0)
-          if (endAt > maxTime){
+          if (endAt > maxTime) {
             maxTime = endAt
           }
         }
@@ -138,21 +135,21 @@ function ParamTransform(context, params){
     return maxTime
   }
 
-  function getValueAt(time){
+  function getValueAt (time) {
     var lastValue = 1
 
-    for (var i=0;i<params.length;i++){
+    for (var i = 0; i < params.length; i++) {
       var value = getChannelValueAt(i, time)
 
       var l = lastValue
 
-      if (transforms[i]){
+      if (transforms[i]) {
         lastValue = transforms[i](lastValue, value)
       } else {
         lastValue = value
       }
 
-      if (typeof lastValue == 'number' && isNaN(lastValue)){
+      if (typeof lastValue === 'number' && isNaN(lastValue)) {
         getChannelValueAt(i, time)
         transforms[i](l, value)
       }
@@ -161,16 +158,16 @@ function ParamTransform(context, params){
     return lastValue
   }
 
-  function getChannelValueAt(index, time){
+  function getChannelValueAt (index, time) {
     var events = channels[index]
 
-    if (events){
-      for (var i=0;i<events.length;i++){
+    if (events) {
+      for (var i = 0; i < events.length; i++) {
         var event = events[i]
-        var next = events[i+1]
+        var next = events[i + 1]
 
-        if (!next || next.at > time){
-          if (interpolateChannel[index]){
+        if (!next || next.at > time) {
+          if (interpolateChannel[index]) {
             return interpolate(event, time)
           } else {
             return event.value
