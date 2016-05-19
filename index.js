@@ -34,39 +34,39 @@ function Param(context, defaultValue){
     }
   }
 
-  obs.getValueAt = function(at){
-    if (obs.node && obs.node.getValueAt){
+  obs.getValueAt = function (at) {
+    if (obs.node && obs.node.getValueAt) {
       return obs.node.getValueAt(at)
     } else {
       return obs.getValue()
     }
   }
 
-  obs.getValue = function(){
+  obs.getValue = function() {
     return getValue(obs(), defaultValue)
   }
 
   obs.context = context
 
-  if (defaultValue != null){
+  if (defaultValue != null) {
     set(defaultValue)
   }
 
   var broadcast = null
-  obs.onSchedule = Event(function(b){
+  obs.onSchedule = Event(function (b) {
     broadcast = b
   })
 
   var release = null
   var lastNode = null
-  obs.onNode(function (node) {
 
+  obs.onNode(function (node) {
     if (lastNode) {
       release && release()
       release = null
     }
 
-    if (node){
+    if (node) {
       var release = node.onSchedule(broadcast)
     }
 
@@ -85,6 +85,10 @@ function Param(context, defaultValue){
     return obs.node && obs.node.getReleaseDuration && obs.node.getReleaseDuration() || 0
   }
 
+  obs.cancelFrom = function (at) {
+    return obs.node && obs.node.cancelFrom && obs.node.cancelFrom(at)
+  }
+
   return obs
 }
 
@@ -92,6 +96,14 @@ Param.triggerOn = function (obj, at) {
   for (var k in obj) {
     if (obj[k] && obj[k].triggerOn) {
       obj[k].triggerOn(at)
+    }
+  }
+}
+
+Param.cancelFrom = function (obj, at) {
+  for (var k in obj) {
+    if (obj[k] && obj[k].cancelFrom) {
+      obj[k].cancelFrom(at)
     }
   }
 }

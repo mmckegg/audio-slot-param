@@ -1,5 +1,6 @@
 var interpolate = require('./lib/interpolate.js')
 
+
 module.exports = ApplyParam
 
 function ApplyParam(context, target, param){
@@ -47,8 +48,10 @@ function ApplyParam(context, target, param){
       descriptor.fromValue :
       fromValue
 
-
-    if (descriptor.duration){
+    if (descriptor.mode === 'cancel') {
+      target.cancelScheduledValues(descriptor.at)
+      truncate(descriptor.at)
+    } else if (descriptor.duration) {
 
       if (maxSchedule > descriptor.at){
         target.cancelScheduledValues(descriptor.at)
@@ -72,7 +75,6 @@ function ApplyParam(context, target, param){
     } else if (descriptor.mode !== 'init' || !maxSchedule) {
       truncate(descriptor.at)
       events.push(descriptor)
-
       target.cancelScheduledValues(descriptor.at)
       target.setValueAtTime(descriptor.value, descriptor.at)
       maxSchedule = descriptor.at

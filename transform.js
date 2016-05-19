@@ -74,6 +74,17 @@ function ParamTransform (context, params) {
       descriptor = { value: descriptor, at: context.audio.currentTime }
     }
 
+    if (descriptor.mode === 'cancel') {
+      var currentValue = getChannelValueAt(index, descriptor.at)
+      if (isFinite(currentValue) && getEndTime() > context.audio.currentTime) {
+        descriptor.value = currentValue
+        truncate(index, descriptor.at)
+        channels[index].push(descriptor)
+      } else {
+        return false
+      }
+    }
+
     var toTime = descriptor.at + (descriptor.duration || 0)
     lastValues[index] = descriptor.value
 
@@ -99,6 +110,7 @@ function ParamTransform (context, params) {
         duration: endTime - toTime
       })
     }
+
   }
 
   function broadcastIfValid (descriptor) {
