@@ -30,6 +30,7 @@
     "geval": "^2.1.1",
     "observ": "^0.2.0",
     "observ-node-array": "^1.10.0",
+    "pseudo-audio-param": "^1.1.0",
     "setimmediate2": "^2.0.1"
   }
 }
