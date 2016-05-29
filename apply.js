@@ -47,7 +47,7 @@ function ApplyParam (context, target, param) {
 
   function schedule (descriptor) {
     if (!(descriptor instanceof Object)) {
-      descriptor = { value: descriptor, at: context.audio.currentTime }
+      descriptor = { value: descriptor, at: context.audio.currentTime, duration: 0.1, mode: 'log' }
     }
 
     var toTime = descriptor.at + (descriptor.duration || 0)
