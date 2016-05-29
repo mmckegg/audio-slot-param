@@ -22,7 +22,8 @@ function Param(context, defaultValue){
     set(v == null ? defaultValue : v)
     if (typeof obs() === 'number'){
       var msg = {
-        type: 'set',
+        mode: 'log',
+        duration: 0.1,
         value: obs(),
         at: context.audio.currentTime
       }
