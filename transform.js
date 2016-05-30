@@ -1,7 +1,5 @@
 var Event = require('geval')
-var PseudoAudioParam = require('pseudo-audio-param')
-var apply = require('./apply')
-var setImmediate = require('setimmediate2').setImmediate
+var interpolate = require('./lib/interpolate.js')
 
 module.exports = ParamTransform
 
@@ -9,10 +7,8 @@ function ParamTransform (context, params) {
   var releases = []
   var channels = []
   var transforms = []
-  var values = []
-
-  var rescheduling = false
-  var scheduleFrom = context.audio.currentTime
+  var lastValues = []
+  var interpolateChannel = []
 
   params.forEach(function (container, i) {
     if (container.onSchedule) {
@@ -23,16 +19,22 @@ function ParamTransform (context, params) {
 
     if (container.param) {
       var param = container.param
+
       if (param.onSchedule) {
-        var channel = channels[i] = new PseudoAudioParam()
-        releases.push(apply(context, channel, param))
-        releases.push(param.onSchedule(onSchedule))
+        releases.push(param.onSchedule(schedule.bind(this, i)))
+        interpolateChannel[i] = true
       } else if (typeof param === 'function') {
-        releases.push(param(onChange.bind(this, i)))
-        values[i] = param()
+        releases.push(param(schedule.bind(this, i)))
       }
+      if (param.getValueAt) {
+        lastValues[i] = param.getValueAt(context.audio.currentTime)
+      } else if (typeof param === 'function') {
+        lastValues[i] = param()
+      }
+
+      channels[i] = []
     } else if (container.value != null) {
-      values[i] = container.value
+      lastValues[i] = container.value
     }
 
     if (container.transform) {
@@ -66,70 +68,76 @@ function ParamTransform (context, params) {
   }
 
   // scoped
-  function onSchedule (descriptor) {
-    schedule(Math.max(context.audio.currentTime, descriptor.at))
-  }
 
-  function onChange (i, value) {
-    values[i] = value
-    schedule(context.audio.currentTime)
-  }
-
-  function schedule (from) {
-    scheduleFrom = Math.max(context.audio.currentTime, Math.min(from, scheduleFrom))
-    if (!rescheduling) {
-      rescheduling = true
-      setImmediate(doSchedule)
-    }
-  }
-
-  function doSchedule () {
-    rescheduling = false
-    var endTime = Math.max(scheduleFrom, getEndTime())
-    var duration = endTime - scheduleFrom
-
-    var steps = Math.ceil(duration * context.audio.sampleRate / 100) || 1
-    var stepTime = duration / steps
-    var curve = new Float32Array(steps + 1)
-    for (var i = 0; i < curve.length; i++) {
-      var time = stepTime * i + scheduleFrom
-      curve[i] = getValueAt(time)
+  function schedule (index, descriptor) {
+    if (!interpolateChannel[index]) {
+      descriptor = { value: descriptor, at: context.audio.currentTime }
     }
 
-    broadcast({
-      at: scheduleFrom,
-      mode: 'curve',
-      value: curve,
-      duration: duration
-    })
-
-    scheduleFrom = endTime
-  }
-
-  function getValueAt (at) {
-    var lastValue = 1
-    for (var i = 0; i < params.length; i++) {
-      var value = channels[i]
-        ? channels[i].getValueAtTime(at)
-        : values[i]
-      if (transforms[i]) {
-        lastValue = transforms[i](lastValue, value)
+    if (descriptor.mode === 'cancel') {
+      var currentValue = getChannelValueAt(index, descriptor.at)
+      if (isFinite(currentValue) && getEndTime() > context.audio.currentTime) {
+        descriptor.value = currentValue
+        truncate(index, descriptor.at)
+        channels[index].push(descriptor)
       } else {
-        lastValue = value
+        return false
       }
     }
-    return lastValue
+
+    var toTime = descriptor.at + (descriptor.duration || 0)
+    lastValues[index] = descriptor.value
+
+    descriptor.fromValue = descriptor.fromValue != null
+      ? descriptor.fromValue
+      : getChannelValueAt(index, descriptor.at)
+
+    truncate(index, descriptor.at)
+    channels[index].push(descriptor)
+
+    broadcastIfValid({
+      at: descriptor.at,
+      mode: descriptor.mode,
+      value: getValueAt(toTime),
+      duration: descriptor.duration
+    })
+
+    var endTime = getEndTime()
+    if (endTime > toTime) {
+      broadcastIfValid({
+        at: toTime,
+        value: getValueAt(endTime),
+        duration: endTime - toTime
+      })
+    }
+
+  }
+
+  function broadcastIfValid (descriptor) {
+    if (descriptor && isFinite(descriptor.value)) {
+      broadcast(descriptor)
+    }
+  }
+
+  function truncate (index, at) {
+    var events = channels[index]
+    var currentTime = context.audio.currentTime
+    for (var i = events.length - 1; i >= 0; i--) {
+      var to = events[i].at + (events[i].duration || 0)
+      if (events[i].at > at || to < currentTime) {
+        events.splice(i, 1)
+      }
+    }
   }
 
   function getEndTime () {
     var maxTime = context.audio.currentTime
     for (var i = 0; i < params.length; i++) {
-      if (channels[i] && channels[i].events) {
-        var events = channels[i].events
+      var events = channels[i]
+      if (events) {
         var lastEvent = events[events.length - 1]
         if (lastEvent) {
-          var duration = lastEvent.timeConstant ? lastEvent.timeConstant * 8 : lastEvent.duration
-          var endAt = lastEvent.time + (duration || 0)
+          var endAt = lastEvent.at + (lastEvent.duration || 0)
           if (endAt > maxTime) {
             maxTime = endAt
           }
@@ -137,5 +145,49 @@ function ParamTransform (context, params) {
       }
     }
     return maxTime
+  }
+
+  function getValueAt (time) {
+    var lastValue = 1
+
+    for (var i = 0; i < params.length; i++) {
+      var value = getChannelValueAt(i, time)
+
+      var l = lastValue
+
+      if (transforms[i]) {
+        lastValue = transforms[i](lastValue, value)
+      } else {
+        lastValue = value
+      }
+
+      if (typeof lastValue === 'number' && isNaN(lastValue)) {
+        getChannelValueAt(i, time)
+        transforms[i](l, value)
+      }
+    }
+
+    return lastValue
+  }
+
+  function getChannelValueAt (index, time) {
+    var events = channels[index]
+
+    if (events) {
+      for (var i = 0; i < events.length; i++) {
+        var event = events[i]
+        var next = events[i + 1]
+
+        if (!next || next.at > time) {
+          if (interpolateChannel[index]) {
+            return interpolate(event, time)
+          } else {
+            return event.value
+          }
+        }
+      }
+    }
+
+    return lastValues[index]
   }
 }

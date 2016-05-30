@@ -1,94 +1,124 @@
-var PseudoAudioParam = require('pseudo-audio-param')
+var interpolate = require('./lib/interpolate.js')
+
 
 module.exports = ApplyParam
 
-var nextId = 0
+function ApplyParam(context, target, param){
 
-function ApplyParam (context, target, param) {
-  var id = nextId++
   var release = null
+  var lastValue = null
   var currentTime = context.audio.currentTime
-  var fallback = null
-  if (!target.getValueAtTime) {
-    var audioParam = new PseudoAudioParam()
-    audioParam.applyTo(target)
-    fallback = target
-    target = audioParam
-  }
-
+  var events = []
   var maxSchedule = 0
 
-  if (param.onSchedule) {
+  if (param.onSchedule){
     release = param.onSchedule(schedule)
-    if (param.getValueAt) {
-      send('setValueAtTime', [
-        param.getValueAt(currentTime),
-        currentTime]
-      )
+
+    if (param.getValueAt){
+      lastValue = param.getValueAt(currentTime)
     }
-  } else if (typeof param === 'function') {
+
+  } else if (typeof param === 'function'){
     release = param(schedule)
-    send('setValueAtTime', [
-      param(),
-      currentTime
-    ])
+    lastValue = param()
+  }
+
+  if (currentTime != null && isFinite(lastValue)) {
+    target.setValueAtTime(lastValue, currentTime)
   }
 
   return release
 
   // scoped
-
-  function send (method, args) {
-    if (fallback) {
-      fallback[method].apply(fallback, args)
-    }
-    target[method].apply(target, args)
-  }
-
-  function schedule (descriptor) {
+  function schedule(descriptor){
     if (!(descriptor instanceof Object)) {
       descriptor = { value: descriptor, at: context.audio.currentTime, duration: 0.1, mode: 'log' }
     }
 
     var toTime = descriptor.at + (descriptor.duration || 0)
-    var fromTime = Math.max(descriptor.at, context.audio.currentTime)
-    toTime = Math.max(fromTime, toTime)
+    lastValue = descriptor.value
 
-    var fromValue = descriptor.fromValue != null
-      ? descriptor.fromValue
-      : target.getValueAtTime(fromTime)
+    descriptor.at = Math.max(descriptor.at, context.audio.currentTime)
+    toTime = Math.max(toTime, context.audio.currentTime)
 
-    var toValue = descriptor.value
+    var fromValue = getValueAt(descriptor.at)
+
+    descriptor.fromValue = descriptor.fromValue != null ?
+      descriptor.fromValue :
+      fromValue
 
     if (descriptor.mode === 'cancel') {
-      send('cancelScheduledValues', [fromTime])
-    } else {
-      if (maxSchedule > fromTime) {
-        send('cancelScheduledValues', [fromTime])
-        maxSchedule = fromTime
+      target.cancelScheduledValues(descriptor.at)
+      truncate(descriptor.at)
+    } else if (descriptor.duration) {
+
+      if (maxSchedule > descriptor.at){
+        target.cancelScheduledValues(descriptor.at)
+        maxSchedule = descriptor.at
       }
 
-      if (isFinite(fromValue) && (typeof descriptor.fromValue === 'number' || descriptor.mode !== 'log') && descriptor.mode !== 'curve') {
-        send('setValueAtTime', [fromValue, fromTime])
+      if (isRampingAt(descriptor.at)){
+        target.setValueAtTime(fromValue, descriptor.at)
       }
 
-      if (descriptor.mode === 'curve') {
-        send('setValueCurveAtTime', [toValue, fromTime, descriptor.duration || 0.0001])
-      } else if (descriptor.duration) {
-        if (descriptor.mode === 'exp') {
-          send('exponentialRampToValueAtTime', [toValue, toTime])
-        } else if (descriptor.mode === 'log') {
-          send('setTargetAtTime', [toValue, fromTime, descriptor.duration / 8])
-        } else {
-          send('linearRampToValueAtTime', [toValue, toTime])
-        }
+      truncate(descriptor.at)
+      events.push(descriptor)
+
+      if (descriptor.mode === 'exp'){
+        target.exponentialRampToValueAtTime(descriptor.value, toTime)
+      } else if (descriptor.mode === 'log'){
+        target.setTargetAtTime(descriptor.value, descriptor.at, descriptor.duration / 8)
       } else {
-        send('setValueAtTime', [toValue, fromTime])
+        target.linearRampToValueAtTime(descriptor.value, toTime)
       }
+    } else if (descriptor.mode !== 'init' || !maxSchedule) {
+      truncate(descriptor.at)
+      events.push(descriptor)
+      target.cancelScheduledValues(descriptor.at)
+      target.setValueAtTime(descriptor.value, descriptor.at)
+      maxSchedule = descriptor.at
     }
 
-    if (maxSchedule < toTime) {
+    if (maxSchedule < toTime){
       maxSchedule = toTime
     }
+  }
+
+  function truncate(at){
+    var currentTime = context.audio.currentTime
+    for (var i=events.length-1;i>=0;i--){
+      var to = events[i].at + (events[i].duration || 0)
+      if (events[i].at > at || to < currentTime){
+        events.splice(i, 1)
+      }
+    }
+  }
+
+  function getEndTime(){
+    var lastEvent = events[events.length-1]
+    if (lastEvent){
+      return lastEvent.at + (lastEvent.duration || 0)
+    }
+  }
+
+  function getValueAt(time){
+    for (var i=0;i<events.length;i++){
+      var event = events[i]
+      var next = events[i+1]
+      if (!next || next.at > time){
+        return interpolate(event, time)
+      }
+    }
+    return lastValue
+  }
+
+  function isRampingAt(time){
+    for (var i=0;i<events.length;i++){
+      var event = events[i]
+      if (event.at >= time && (event.at + event.duration||0) <= time){
+        return event.duration && event.mode !== 'log'
+      }
+    }
+    return false
   }
 }
