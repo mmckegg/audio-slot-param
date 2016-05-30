@@ -1,6 +1,7 @@
 var ObservNode = require('observ-node-array/single')
 var Event = require('geval')
 var setImmediate = require('setimmediate2').setImmediate
+var deepEqual = require('deep-equal')
 
 module.exports = Param
 
@@ -18,19 +19,21 @@ function Param(context, defaultValue){
   // handle defaultValue
   var set = obs.set
   obs.defaultValue = defaultValue
-  obs.set = function(v){
-    set(v == null ? defaultValue : v)
-    if (typeof obs() === 'number'){
-      var msg = {
-        mode: 'log',
-        duration: 0.1,
-        value: obs(),
-        at: context.audio.currentTime
-      }
-      if (initial) {
-        queued.push(msg)
-      } else {
-        broadcast(msg)
+  obs.set = function (v) {
+    if (!deepEqual(v, obs())) {
+      set(v == null ? defaultValue : v)
+      if (typeof obs() === 'number') {
+        var msg = {
+          mode: 'log',
+          duration: 0.1,
+          value: obs(),
+          at: context.audio.currentTime
+        }
+        if (initial) {
+          queued.push(msg)
+        } else {
+          broadcast(msg)
+        }
       }
     }
   }

@@ -1,11 +1,13 @@
 var watch = require('observ/watch')
 var Event = require('geval')
+var deepEqual = require('deep-equal')
 
 module.exports = ParamProxy
 
 function ParamProxy(context, defaultValue){
   var target = null
   var release = null
+  var lastValue = null
 
   var obs = proxy()
   obs.getValueAt = proxy('getValueAt', defaultValue)
@@ -31,17 +33,20 @@ function ParamProxy(context, defaultValue){
 
           if (value.getValueAt) {
             broadcast({
-              at: context.audio.currentTime, 
-              value: value.getValueAt(context.audio.currentTime) 
+              at: context.audio.currentTime,
+              value: value.getValueAt(context.audio.currentTime)
             })
           }
 
         } else if (typeof value === 'function') {
           release = watch(value, function(data) {
-            broadcast({
-              value: data,
-              at: context.audio.currentTime
-            })
+            if (!deepEqual(lastValue, data)) {
+              lastValue = data
+              broadcast({
+                value: data,
+                at: context.audio.currentTime
+              })
+            }
           })
         }
       }

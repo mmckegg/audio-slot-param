@@ -27,6 +27,7 @@
   },
   "homepage": "https://github.com/mmckegg/audio-slot-param#readme",
   "dependencies": {
+    "deep-equal": "^1.0.1",
     "geval": "^2.1.1",
     "observ": "^0.2.0",
     "observ-node-array": "^1.10.0",
