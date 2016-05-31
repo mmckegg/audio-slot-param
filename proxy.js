@@ -37,9 +37,8 @@ function ParamProxy(context, defaultValue){
               value: value.getValueAt(context.audio.currentTime)
             })
           }
-
         } else if (typeof value === 'function') {
-          release = watch(value, function(data) {
+          release = watch(value, function (data) {
             if (!deepEqual(lastValue, data)) {
               lastValue = data
               broadcast({
@@ -47,6 +46,11 @@ function ParamProxy(context, defaultValue){
                 at: context.audio.currentTime
               })
             }
+          })
+        } else {
+          broadcast({
+            value: value,
+            at: context.audio.currentTime
           })
         }
       }
