@@ -5,6 +5,10 @@ module.exports = ApplyParam
 
 function ApplyParam(context, target, param){
 
+  if (!target || !target.setValueAtTime) {
+    throw new Error('Target must be an AudioParam')
+  }
+
   var release = null
   var lastValue = null
   var currentTime = context.audio.currentTime
